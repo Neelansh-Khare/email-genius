@@ -57,7 +57,7 @@ Subject: [subject line]
                 {"role": "system", "content": "You are an expert email writer who crafts compelling, effective cold emails and professional correspondence."},
                 {"role": "user", "content": prompt}
             ],
-            max_completion_tokens=1000
+            max_tokens=1000
         )
         
         generated_email = response.choices[0].message.content
