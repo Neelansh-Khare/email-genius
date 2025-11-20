@@ -353,12 +353,12 @@
                     </div>
                 `;
                 
-                contactCard.addEventListener('click', () => selectContact(contact));
+                contactCard.addEventListener('click', (e) => selectContact(contact, e));
                 contactsList.appendChild(contactCard);
             });
         }
 
-        function selectContact(contact) {
+        function selectContact(contact, event) {
             document.querySelectorAll('.contact-card').forEach(card => {
                 card.classList.remove('selected');
             });
