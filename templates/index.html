@@ -13,7 +13,7 @@
             padding: 20px 0;
         }
         .container {
-            max-width: 900px;
+            max-width: 1100px;
         }
         .card {
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
@@ -35,6 +35,14 @@
             background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        .btn-outline-primary {
+            border-color: #667eea;
+            color: #667eea;
+        }
+        .btn-outline-primary:hover {
+            background-color: #667eea;
+            border-color: #667eea;
         }
         #emailOutput {
             background-color: #f8f9fa;
@@ -64,6 +72,27 @@
             right: 20px;
             z-index: 1050;
         }
+        .contact-card {
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        .contact-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+            transform: translateY(-2px);
+        }
+        .contact-card.selected {
+            border-color: #667eea;
+            background-color: #f0f3ff;
+        }
+        .badge-tech {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
     </style>
 </head>
 <body>
@@ -71,48 +100,126 @@
         <div class="card mb-4">
             <div class="card-header">
                 <h1 class="mb-0"><i class="bi bi-envelope-heart"></i> Email Genius</h1>
-                <p class="mb-0 mt-2">AI-Powered Cold Email & Reply Generator</p>
+                <p class="mb-0 mt-2">AI-Powered Cold Email Generator with Contact Finder</p>
             </div>
             <div class="card-body p-4">
-                <form id="emailForm">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="jobRole" class="form-label">Your Job Role</label>
-                            <input type="text" class="form-control" id="jobRole" placeholder="e.g., Sales Manager, Developer">
+                <ul class="nav nav-tabs mb-4" id="mainTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="contacts-tab" data-bs-toggle="tab" data-bs-target="#contacts" type="button">
+                            <i class="bi bi-people-fill"></i> Find Contacts
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="email-tab" data-bs-toggle="tab" data-bs-target="#email" type="button">
+                            <i class="bi bi-envelope"></i> Generate Email
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="mainTabContent">
+                    <div class="tab-pane fade show active" id="contacts" role="tabpanel">
+                        <h5 class="mb-3">Find Hiring Managers</h5>
+                        <form id="contactFinderForm">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="companyType" class="form-label">Company Type</label>
+                                    <select class="form-select" id="companyType">
+                                        <option value="big tech">Big Tech (FAANG, etc.)</option>
+                                        <option value="SF-based startups">SF-Based Startups</option>
+                                        <option value="tech startups">Tech Startups (General)</option>
+                                        <option value="enterprise companies">Enterprise Companies</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="location" class="form-label">Location</label>
+                                    <input type="text" class="form-control" id="location" value="San Francisco" placeholder="e.g., San Francisco, New York">
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Target Roles</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="Staff Engineer" id="role1" checked>
+                                    <label class="form-check-label" for="role1">Staff Engineer</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="Senior Engineering Manager" id="role2" checked>
+                                    <label class="form-check-label" for="role2">Senior Engineering Manager</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="HR Leader" id="role3" checked>
+                                    <label class="form-check-label" for="role3">HR Leader</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="VP of Engineering" id="role4">
+                                    <label class="form-check-label" for="role4">VP of Engineering</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="Talent Acquisition Lead" id="role5">
+                                    <label class="form-check-label" for="role5">Talent Acquisition Lead</label>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary btn-lg w-100" id="findContactsBtn">
+                                <i class="bi bi-search"></i> Find Contacts
+                                <span class="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true"></span>
+                            </button>
+                        </form>
+
+                        <div id="contactsResults" class="mt-4" style="display: none;">
+                            <h5 class="mb-3">Found Contacts <span class="badge badge-tech" id="contactCount">0</span></h5>
+                            <p class="text-muted small"><i class="bi bi-info-circle"></i> Click on a contact to generate a personalized email</p>
+                            <div id="contactsList"></div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="tone" class="form-label">Email Tone</label>
-                            <select class="form-select" id="tone" required>
-                                <option value="professional">Professional</option>
-                                <option value="casual">Casual</option>
-                                <option value="friendly">Friendly</option>
-                                <option value="formal">Formal</option>
-                            </select>
-                        </div>
                     </div>
-                    
-                    <div class="mb-3">
-                        <label for="recipientName" class="form-label">Recipient Name (Optional)</label>
-                        <input type="text" class="form-control" id="recipientName" placeholder="e.g., John Smith">
+
+                    <div class="tab-pane fade" id="email" role="tabpanel">
+                        <form id="emailForm">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="jobRole" class="form-label">Your Job Role</label>
+                                    <input type="text" class="form-control" id="jobRole" placeholder="e.g., Software Engineer, Product Manager">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="tone" class="form-label">Email Tone</label>
+                                    <select class="form-select" id="tone" required>
+                                        <option value="professional">Professional</option>
+                                        <option value="casual">Casual</option>
+                                        <option value="friendly">Friendly</option>
+                                        <option value="formal">Formal</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="recipientName" class="form-label">Recipient Name</label>
+                                <input type="text" class="form-control" id="recipientName" placeholder="e.g., John Smith">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="recipientCompany" class="form-label">Recipient Company</label>
+                                <input type="text" class="form-control" id="recipientCompany" placeholder="e.g., Google, Stripe">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="purpose" class="form-label">Email Purpose <span class="text-danger">*</span></label>
+                                <textarea class="form-control" id="purpose" rows="3" required 
+                                    placeholder="e.g., Express interest in open positions, Request informational interview, Introduce yourself"></textarea>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="additionalContext" class="form-label">Additional Context</label>
+                                <textarea class="form-control" id="additionalContext" rows="2" 
+                                    placeholder="Any extra details (e.g., your background, why you're interested in this company)"></textarea>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary btn-lg w-100" id="generateBtn">
+                                <i class="bi bi-magic"></i> Generate Email
+                                <span class="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true"></span>
+                            </button>
+                        </form>
                     </div>
-                    
-                    <div class="mb-3">
-                        <label for="purpose" class="form-label">Email Purpose <span class="text-danger">*</span></label>
-                        <textarea class="form-control" id="purpose" rows="3" required 
-                            placeholder="e.g., Introduce our new product, Schedule a demo call, Follow up on previous meeting"></textarea>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="additionalContext" class="form-label">Additional Context</label>
-                        <textarea class="form-control" id="additionalContext" rows="2" 
-                            placeholder="Any extra details to include in the email"></textarea>
-                    </div>
-                    
-                    <button type="submit" class="btn btn-primary btn-lg w-100" id="generateBtn">
-                        <i class="bi bi-magic"></i> Generate Email
-                        <span class="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true"></span>
-                    </button>
-                </form>
+                </div>
             </div>
         </div>
 
@@ -156,6 +263,12 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        const contactFinderForm = document.getElementById('contactFinderForm');
+        const findContactsBtn = document.getElementById('findContactsBtn');
+        const contactsResults = document.getElementById('contactsResults');
+        const contactsList = document.getElementById('contactsList');
+        const contactCount = document.getElementById('contactCount');
+
         const form = document.getElementById('emailForm');
         const generateBtn = document.getElementById('generateBtn');
         const emailOutput = document.getElementById('emailOutput');
@@ -167,6 +280,100 @@
         const errorToast = new bootstrap.Toast(document.getElementById('errorToast'));
 
         let generatedEmail = '';
+        let foundContacts = [];
+
+        contactFinderForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const companyType = document.getElementById('companyType').value;
+            const location = document.getElementById('location').value;
+            
+            const roleCheckboxes = document.querySelectorAll('input[type="checkbox"]:checked');
+            const roleTypes = Array.from(roleCheckboxes).map(cb => cb.value);
+
+            if (roleTypes.length === 0) {
+                document.getElementById('errorMessage').textContent = 'Please select at least one target role';
+                errorToast.show();
+                return;
+            }
+
+            findContactsBtn.classList.add('loading');
+            findContactsBtn.disabled = true;
+            contactsResults.style.display = 'none';
+
+            try {
+                const response = await fetch('/find-contacts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        company_type: companyType,
+                        role_types: roleTypes,
+                        location: location
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    foundContacts = data.contacts || [];
+                    displayContacts(foundContacts);
+                    contactsResults.style.display = 'block';
+                    contactCount.textContent = foundContacts.length;
+                } else {
+                    throw new Error(data.error || 'Failed to find contacts');
+                }
+            } catch (error) {
+                document.getElementById('errorMessage').textContent = error.message;
+                errorToast.show();
+            } finally {
+                findContactsBtn.classList.remove('loading');
+                findContactsBtn.disabled = false;
+            }
+        });
+
+        function displayContacts(contacts) {
+            contactsList.innerHTML = '';
+            
+            contacts.forEach((contact, index) => {
+                const contactCard = document.createElement('div');
+                contactCard.className = 'contact-card';
+                contactCard.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1"><i class="bi bi-person-circle"></i> ${contact.name}</h6>
+                            <p class="mb-1 text-muted small"><strong>${contact.title}</strong></p>
+                            <p class="mb-1"><i class="bi bi-building"></i> ${contact.company}</p>
+                            <p class="mb-0 text-muted small"><i class="bi bi-geo-alt"></i> ${contact.location}</p>
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-envelope"></i> Email
+                        </button>
+                    </div>
+                `;
+                
+                contactCard.addEventListener('click', () => selectContact(contact));
+                contactsList.appendChild(contactCard);
+            });
+        }
+
+        function selectContact(contact) {
+            document.querySelectorAll('.contact-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            event.currentTarget.classList.add('selected');
+
+            document.getElementById('recipientName').value = contact.name;
+            document.getElementById('recipientCompany').value = contact.company;
+            document.getElementById('purpose').value = `Express interest in opportunities at ${contact.company} and request an informational interview`;
+            document.getElementById('additionalContext').value = `I noticed your role as ${contact.title} at ${contact.company} and would love to learn more about the team and potential opportunities.`;
+
+            const emailTab = new bootstrap.Tab(document.getElementById('email-tab'));
+            emailTab.show();
+
+            document.getElementById('recipientName').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
