@@ -2,8 +2,12 @@ import os
 from flask import Flask, render_template, request, jsonify
 from google import genai
 from google.genai import types
+from dotenv import load_dotenv
+
 
 app = Flask(__name__)
+
+load_dotenv()
 
 # IMPORTANT: KEEP THIS COMMENT
 # Follow these instructions when using this blueprint:
