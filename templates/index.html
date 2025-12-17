@@ -93,6 +93,65 @@
         .badge-tech {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        .invalid-feedback {
+            display: none;
+            width: 100%;
+            margin-top: 0.25rem;
+            font-size: 0.875em;
+            color: #dc3545;
+        }
+        .was-validated .form-control:invalid,
+        .was-validated .form-select:invalid,
+        .was-validated .form-control:invalid:focus,
+        .was-validated .form-select:invalid:focus {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
+        }
+        .template-card {
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        .template-card:hover {
+            border-color: #667eea;
+            background-color: #f8f9ff;
+            transform: translateY(-2px);
+        }
+        .template-card.selected {
+            border-color: #667eea;
+            background-color: #f0f3ff;
+            border-style: solid;
+        }
+        .form-label .text-danger {
+            margin-left: 3px;
+        }
+        .regenerate-btn {
+            margin-left: 10px;
+        }
+        .email-subject {
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #dee2e6;
+        }
+        .email-body {
+            line-height: 1.6;
+        }
     </style>
 </head>
 <body>
@@ -170,15 +229,63 @@
                             <h5 class="mb-3">Found Contacts <span class="badge badge-tech" id="contactCount">0</span></h5>
                             <p class="text-muted small"><i class="bi bi-info-circle"></i> Click on a contact to generate a personalized email</p>
                             <div id="contactsList"></div>
+                            <div id="contactsEmptyState" class="empty-state" style="display: none;">
+                                <i class="bi bi-inbox"></i>
+                                <h5>No contacts found</h5>
+                                <p>Try adjusting your search criteria or selecting different roles.</p>
+                            </div>
                         </div>
                     </div>
 
                     <div class="tab-pane fade" id="email" role="tabpanel">
-                        <form id="emailForm">
+                        <div class="mb-4">
+                            <label class="form-label mb-2">Quick Templates <span class="text-muted small">(Optional - Click to fill form)</span></label>
+                            <div id="templateCards">
+                                <div class="template-card" data-template="job-seeker">
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-briefcase-fill me-3 text-primary" style="font-size: 1.5rem;"></i>
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">Job Seeker</h6>
+                                            <p class="mb-0 text-muted small">Express interest in open positions and request informational interview</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="template-card" data-template="business-dev">
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-handshake-fill me-3 text-success" style="font-size: 1.5rem;"></i>
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">Business Development</h6>
+                                            <p class="mb-0 text-muted small">Introduce your product/service and explore partnership opportunities</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="template-card" data-template="founder-intro">
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-lightbulb-fill me-3 text-warning" style="font-size: 1.5rem;"></i>
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">Founder Introduction</h6>
+                                            <p class="mb-0 text-muted small">Introduce your startup and seek mentorship or collaboration</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="template-card" data-template="networking">
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-people-fill me-3 text-info" style="font-size: 1.5rem;"></i>
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">Networking</h6>
+                                            <p class="mb-0 text-muted small">Connect with industry professionals and expand your network</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <form id="emailForm" novalidate>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label for="jobRole" class="form-label">Your Job Role</label>
                                     <input type="text" class="form-control" id="jobRole" placeholder="e.g., Software Engineer, Product Manager">
+                                    <div class="invalid-feedback"></div>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label for="tone" class="form-label">Email Tone</label>
@@ -188,6 +295,7 @@
                                         <option value="friendly">Friendly</option>
                                         <option value="formal">Formal</option>
                                     </select>
+                                    <div class="invalid-feedback">Please select an email tone.</div>
                                 </div>
                             </div>
                             
@@ -205,12 +313,14 @@
                                 <label for="purpose" class="form-label">Email Purpose <span class="text-danger">*</span></label>
                                 <textarea class="form-control" id="purpose" rows="3" required 
                                     placeholder="e.g., Express interest in open positions, Request informational interview, Introduce yourself"></textarea>
+                                <div class="invalid-feedback">Please provide the purpose of your email.</div>
                             </div>
                             
                             <div class="mb-3">
                                 <label for="additionalContext" class="form-label">Additional Context</label>
                                 <textarea class="form-control" id="additionalContext" rows="2" 
                                     placeholder="Any extra details (e.g., your background, why you're interested in this company)"></textarea>
+                                <div class="invalid-feedback"></div>
                             </div>
                             
                             <button type="submit" class="btn btn-primary btn-lg w-100" id="generateBtn">
@@ -224,16 +334,24 @@
         </div>
 
         <div class="card" id="outputCard" style="display: none;">
-            <div class="card-header">
+            <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="bi bi-file-earmark-text"></i> Generated Email</h5>
+                <button class="btn btn-sm btn-light regenerate-btn" id="regenerateBtn" title="Regenerate with same settings">
+                    <i class="bi bi-arrow-clockwise"></i> Regenerate
+                </button>
             </div>
             <div class="card-body">
+                <div id="emailEmptyState" class="empty-state" style="display: none;">
+                    <i class="bi bi-envelope"></i>
+                    <h5>No email generated yet</h5>
+                    <p>Fill out the form above and click "Generate Email" to get started.</p>
+                </div>
                 <div id="emailOutput"></div>
                 <div class="action-buttons mt-3">
                     <button class="btn btn-success me-2" id="copyBtn">
                         <i class="bi bi-clipboard"></i> Copy to Clipboard
                     </button>
-                    <button class="btn btn-info" id="downloadBtn">
+                    <button class="btn btn-info me-2" id="downloadBtn">
                         <i class="bi bi-download"></i> Download as TXT
                     </button>
                 </div>
@@ -276,11 +394,57 @@
         const actionButtons = document.querySelector('.action-buttons');
         const copyBtn = document.getElementById('copyBtn');
         const downloadBtn = document.getElementById('downloadBtn');
+        const regenerateBtn = document.getElementById('regenerateBtn');
         const successToast = new bootstrap.Toast(document.getElementById('successToast'));
         const errorToast = new bootstrap.Toast(document.getElementById('errorToast'));
 
         let generatedEmail = '';
         let foundContacts = [];
+        let lastEmailParams = null;
+
+        // Template data
+        const templates = {
+            'job-seeker': {
+                purpose: 'Express interest in open positions at your company and request an informational interview to learn more about the team and culture.',
+                additionalContext: 'I am actively seeking opportunities in [your field] and would love to learn more about how I can contribute to your team.',
+                tone: 'professional'
+            },
+            'business-dev': {
+                purpose: 'Introduce our product/service and explore potential partnership or collaboration opportunities.',
+                additionalContext: 'We specialize in [your area] and believe there could be mutual value in exploring how we might work together.',
+                tone: 'professional'
+            },
+            'founder-intro': {
+                purpose: 'Introduce my startup and seek mentorship, advice, or potential collaboration opportunities.',
+                additionalContext: 'I recently started [company name] focused on [mission]. I would greatly value your insights and experience in [relevant area].',
+                tone: 'friendly'
+            },
+            'networking': {
+                purpose: 'Connect with you as a fellow professional in the industry and expand my network.',
+                additionalContext: 'I noticed we share interests in [common interest] and would love to connect and learn from your experience.',
+                tone: 'casual'
+            }
+        };
+
+        // Template selection
+        document.querySelectorAll('.template-card').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.template-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                
+                const templateType = card.dataset.template;
+                const template = templates[templateType];
+                
+                if (template) {
+                    document.getElementById('purpose').value = template.purpose;
+                    document.getElementById('additionalContext').value = template.additionalContext;
+                    document.getElementById('tone').value = template.tone;
+                    
+                    // Scroll to form
+                    document.getElementById('emailForm').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            });
+        });
 
         contactFinderForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -321,6 +485,14 @@
                     displayContacts(foundContacts);
                     contactsResults.style.display = 'block';
                     contactCount.textContent = foundContacts.length;
+                    
+                    // Show empty state if no contacts
+                    const contactsEmptyState = document.getElementById('contactsEmptyState');
+                    if (foundContacts.length === 0) {
+                        contactsEmptyState.style.display = 'block';
+                    } else {
+                        contactsEmptyState.style.display = 'none';
+                    }
                 } else {
                     throw new Error(data.error || 'Failed to find contacts');
                 }
@@ -375,15 +547,35 @@
             document.getElementById('recipientName').scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
+        function parseEmail(emailText) {
+            const subjectMatch = emailText.match(/Subject:\s*(.+)/i);
+            const subject = subjectMatch ? subjectMatch[1].trim() : '';
+            const body = subjectMatch 
+                ? emailText.replace(/Subject:\s*.+/i, '').trim() 
+                : emailText.trim();
             
-            const jobRole = document.getElementById('jobRole').value;
-            const purpose = document.getElementById('purpose').value;
-            const tone = document.getElementById('tone').value;
-            const recipientName = document.getElementById('recipientName').value;
-            const additionalContext = document.getElementById('additionalContext').value;
+            return { subject, body };
+        }
 
+        function displayEmail(emailText) {
+            const { subject, body } = parseEmail(emailText);
+            const emailEmptyState = document.getElementById('emailEmptyState');
+            
+            if (emailEmptyState) {
+                emailEmptyState.style.display = 'none';
+            }
+            
+            let html = '';
+            if (subject) {
+                html += `<div class="email-subject"><i class="bi bi-tag-fill"></i> ${subject}</div>`;
+            }
+            html += `<div class="email-body">${body.replace(/\n/g, '<br>')}</div>`;
+            
+            emailOutput.innerHTML = html;
+            emailOutput.style.display = 'block';
+        }
+
+        async function generateEmail(params) {
             generateBtn.classList.add('loading');
             generateBtn.disabled = true;
             outputCard.style.display = 'none';
@@ -394,20 +586,14 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({
-                        job_role: jobRole,
-                        purpose: purpose,
-                        tone: tone,
-                        recipient_name: recipientName,
-                        additional_context: additionalContext
-                    }),
+                    body: JSON.stringify(params),
                 });
 
                 const data = await response.json();
 
                 if (response.ok) {
                     generatedEmail = data.email;
-                    emailOutput.textContent = generatedEmail;
+                    displayEmail(generatedEmail);
                     outputCard.style.display = 'block';
                     actionButtons.classList.add('show');
                     
@@ -422,6 +608,48 @@
                 generateBtn.classList.remove('loading');
                 generateBtn.disabled = false;
             }
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Validate form
+            if (!form.checkValidity()) {
+                e.stopPropagation();
+                form.classList.add('was-validated');
+                return;
+            }
+            
+            form.classList.add('was-validated');
+            
+            const jobRole = document.getElementById('jobRole').value;
+            const purpose = document.getElementById('purpose').value;
+            const tone = document.getElementById('tone').value;
+            const recipientName = document.getElementById('recipientName').value;
+            const additionalContext = document.getElementById('additionalContext').value;
+
+            const params = {
+                job_role: jobRole,
+                purpose: purpose,
+                tone: tone,
+                recipient_name: recipientName,
+                additional_context: additionalContext
+            };
+
+            // Store params for regenerate
+            lastEmailParams = params;
+
+            await generateEmail(params);
+        });
+
+        // Regenerate button
+        regenerateBtn.addEventListener('click', async () => {
+            if (lastEmailParams) {
+                await generateEmail(lastEmailParams);
+            } else {
+                document.getElementById('errorMessage').textContent = 'Please generate an email first before regenerating.';
+                errorToast.show();
+            }
         });
 
         copyBtn.addEventListener('click', async () => {
@@ -433,6 +661,15 @@
                 errorToast.show();
             }
         });
+
+        // Show empty state when output card is displayed without email
+        function checkEmailEmptyState() {
+            const emailEmptyState = document.getElementById('emailEmptyState');
+            if (outputCard.style.display !== 'none' && !generatedEmail && emailEmptyState) {
+                emailEmptyState.style.display = 'block';
+                emailOutput.style.display = 'none';
+            }
+        }
 
         downloadBtn.addEventListener('click', () => {
             const blob = new Blob([generatedEmail], { type: 'text/plain' });
