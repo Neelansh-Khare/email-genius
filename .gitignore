@@ -61,3 +61,6 @@ htmlcov/
 
 # Logs
 *.log
+
+# User data
+user_profiles.json

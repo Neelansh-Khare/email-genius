@@ -158,8 +158,25 @@
     <div class="container">
         <div class="card mb-4">
             <div class="card-header">
-                <h1 class="mb-0"><i class="bi bi-envelope-heart"></i> Email Genius</h1>
-                <p class="mb-0 mt-2">AI-Powered Cold Email Generator with Contact Finder</p>
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h1 class="mb-0"><i class="bi bi-envelope-heart"></i> Email Genius</h1>
+                        <p class="mb-0 mt-2">AI-Powered Cold Email Generator with Contact Finder</p>
+                    </div>
+                    <div class="text-end">
+                        <div id="gmailStatus" class="mb-2">
+                            <span id="gmailStatusBadge" class="badge bg-secondary">
+                                <i class="bi bi-envelope-x"></i> Gmail Not Connected
+                            </span>
+                        </div>
+                        <button class="btn btn-sm btn-light" id="connectGmailBtn" style="display: none;">
+                            <i class="bi bi-google"></i> Connect Gmail
+                        </button>
+                        <button class="btn btn-sm btn-light" id="editProfileBtn">
+                            <i class="bi bi-gear"></i> Edit Profile
+                        </button>
+                    </div>
+                </div>
             </div>
             <div class="card-body p-4">
                 <ul class="nav nav-tabs mb-4" id="mainTabs" role="tablist">
@@ -310,6 +327,12 @@
                             </div>
                             
                             <div class="mb-3">
+                                <label for="recipientEmail" class="form-label">Recipient Email <span class="text-muted small">(for sending)</span></label>
+                                <input type="email" class="form-control" id="recipientEmail" placeholder="recipient@company.com">
+                                <small class="form-text text-muted">Required if you want to send the email directly</small>
+                            </div>
+                            
+                            <div class="mb-3">
                                 <label for="purpose" class="form-label">Email Purpose <span class="text-danger">*</span></label>
                                 <textarea class="form-control" id="purpose" rows="3" required 
                                     placeholder="e.g., Express interest in open positions, Request informational interview, Introduce yourself"></textarea>
@@ -353,6 +376,71 @@
                     </button>
                     <button class="btn btn-info me-2" id="downloadBtn">
                         <i class="bi bi-download"></i> Download as TXT
+                    </button>
+                    <button class="btn btn-primary me-2" id="sendEmailBtn" style="display: none;">
+                        <i class="bi bi-send"></i> Send Email
+                        <span class="spinner-border spinner-border-sm ms-2 d-none" role="status"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Onboarding Modal -->
+    <div class="modal fade" id="onboardingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <h5 class="modal-title"><i class="bi bi-person-plus"></i> Welcome to Email Genius!</h5>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-4">Let's set up your profile to personalize your emails. This information will be automatically included in all generated emails.</p>
+                    <form id="onboardingForm" novalidate>
+                        <div class="mb-3">
+                            <label for="onboardingName" class="form-label">Full Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="onboardingName" required placeholder="John Doe">
+                            <div class="invalid-feedback">Please provide your name.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="onboardingEmail" class="form-label">Email Address <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" id="onboardingEmail" required placeholder="john@example.com">
+                            <div class="invalid-feedback">Please provide a valid email address.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="onboardingLinkedIn" class="form-label">LinkedIn Profile URL</label>
+                            <input type="url" class="form-control" id="onboardingLinkedIn" placeholder="https://linkedin.com/in/johndoe">
+                        </div>
+                        <div class="mb-3">
+                            <label for="onboardingPhone" class="form-label">Phone Number</label>
+                            <input type="tel" class="form-control" id="onboardingPhone" placeholder="+1 (555) 123-4567">
+                        </div>
+                        <div class="mb-3">
+                            <label for="onboardingJobRole" class="form-label">Your Current/Desired Job Role <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="onboardingJobRole" required placeholder="e.g., Software Engineer, Product Manager">
+                            <div class="invalid-feedback">Please provide your job role.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="onboardingJobPreference" class="form-label">Job Type Preference</label>
+                            <select class="form-select" id="onboardingJobPreference">
+                                <option value="">Select preference...</option>
+                                <option value="Full-time">Full-time</option>
+                                <option value="Part-time">Part-time</option>
+                                <option value="Contract">Contract</option>
+                                <option value="Internship">Internship</option>
+                                <option value="Remote">Remote</option>
+                                <option value="Hybrid">Hybrid</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="onboardingLocation" class="form-label">Location Preference</label>
+                            <input type="text" class="form-control" id="onboardingLocation" placeholder="e.g., San Francisco, Remote, New York">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="saveProfileBtn">
+                        <i class="bi bi-check-circle"></i> Save Profile
+                        <span class="spinner-border spinner-border-sm ms-2 d-none" role="status"></span>
                     </button>
                 </div>
             </div>
@@ -401,6 +489,132 @@
         let generatedEmail = '';
         let foundContacts = [];
         let lastEmailParams = null;
+        let userProfile = null;
+        let currentRecipientEmail = null;
+        let emailSubject = '';
+        let emailBody = '';
+
+        // Onboarding Modal
+        const onboardingModal = new bootstrap.Modal(document.getElementById('onboardingModal'));
+        const onboardingForm = document.getElementById('onboardingForm');
+        const saveProfileBtn = document.getElementById('saveProfileBtn');
+        const editProfileBtn = document.getElementById('editProfileBtn');
+        const connectGmailBtn = document.getElementById('connectGmailBtn');
+        const gmailStatusBadge = document.getElementById('gmailStatusBadge');
+        const sendEmailBtn = document.getElementById('sendEmailBtn');
+
+        // Load user profile on page load
+        async function loadUserProfile() {
+            try {
+                const response = await fetch('/api/profile');
+                const profile = await response.json();
+                
+                if (profile && profile.name) {
+                    userProfile = profile;
+                    // Auto-fill form fields
+                    if (profile.job_role) {
+                        document.getElementById('jobRole').value = profile.job_role;
+                    }
+                    // Check Gmail status
+                    checkGmailStatus();
+                } else {
+                    // Show onboarding modal
+                    onboardingModal.show();
+                }
+            } catch (error) {
+                console.error('Error loading profile:', error);
+                onboardingModal.show();
+            }
+        }
+
+        // Check Gmail connection status
+        async function checkGmailStatus() {
+            try {
+                const response = await fetch('/api/gmail/status');
+                const data = await response.json();
+                
+                if (data.connected) {
+                    gmailStatusBadge.className = 'badge bg-success';
+                    gmailStatusBadge.innerHTML = '<i class="bi bi-envelope-check"></i> Gmail Connected';
+                    connectGmailBtn.style.display = 'none';
+                } else {
+                    gmailStatusBadge.className = 'badge bg-secondary';
+                    gmailStatusBadge.innerHTML = '<i class="bi bi-envelope-x"></i> Gmail Not Connected';
+                    connectGmailBtn.style.display = 'inline-block';
+                }
+            } catch (error) {
+                console.error('Error checking Gmail status:', error);
+            }
+        }
+
+        // Save profile
+        saveProfileBtn.addEventListener('click', async () => {
+            if (!onboardingForm.checkValidity()) {
+                onboardingForm.classList.add('was-validated');
+                return;
+            }
+
+            const spinner = saveProfileBtn.querySelector('.spinner-border');
+            spinner.classList.remove('d-none');
+            saveProfileBtn.disabled = true;
+
+            try {
+                const profileData = {
+                    name: document.getElementById('onboardingName').value,
+                    email: document.getElementById('onboardingEmail').value,
+                    linkedin: document.getElementById('onboardingLinkedIn').value,
+                    phone: document.getElementById('onboardingPhone').value,
+                    job_role: document.getElementById('onboardingJobRole').value,
+                    job_preference: document.getElementById('onboardingJobPreference').value,
+                    location_preference: document.getElementById('onboardingLocation').value
+                };
+
+                const response = await fetch('/api/profile', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(profileData)
+                });
+
+                if (response.ok) {
+                    userProfile = profileData;
+                    document.getElementById('jobRole').value = profileData.job_role;
+                    onboardingModal.hide();
+                    checkGmailStatus();
+                } else {
+                    throw new Error('Failed to save profile');
+                }
+            } catch (error) {
+                document.getElementById('errorMessage').textContent = error.message;
+                errorToast.show();
+            } finally {
+                spinner.classList.add('d-none');
+                saveProfileBtn.disabled = false;
+            }
+        });
+
+        // Edit profile
+        editProfileBtn.addEventListener('click', () => {
+            if (userProfile) {
+                document.getElementById('onboardingName').value = userProfile.name || '';
+                document.getElementById('onboardingEmail').value = userProfile.email || '';
+                document.getElementById('onboardingLinkedIn').value = userProfile.linkedin || '';
+                document.getElementById('onboardingPhone').value = userProfile.phone || '';
+                document.getElementById('onboardingJobRole').value = userProfile.job_role || '';
+                document.getElementById('onboardingJobPreference').value = userProfile.job_preference || '';
+                document.getElementById('onboardingLocation').value = userProfile.location_preference || '';
+            }
+            onboardingModal.show();
+        });
+
+        // Connect Gmail
+        connectGmailBtn.addEventListener('click', () => {
+            window.location.href = '/auth/google';
+        });
+
+        // Load profile on page load
+        loadUserProfile();
 
         // Template data
         const templates = {
@@ -538,6 +752,13 @@
 
             document.getElementById('recipientName').value = contact.name;
             document.getElementById('recipientCompany').value = contact.company;
+            
+            // Try to extract email from contact (if available) or generate placeholder
+            // For now, we'll use a placeholder format - in production, you'd get real emails
+            const generatedEmail = contact.email || `${contact.name.toLowerCase().replace(/\s+/g, '.')}@${contact.company.toLowerCase().replace(/\s+/g, '')}.com`;
+            currentRecipientEmail = generatedEmail;
+            document.getElementById('recipientEmail').value = generatedEmail;
+            
             document.getElementById('purpose').value = `Express interest in opportunities at ${contact.company} and request an informational interview`;
             document.getElementById('additionalContext').value = `I noticed your role as ${contact.title} at ${contact.company} and would love to learn more about the team and potential opportunities.`;
 
@@ -557,8 +778,11 @@
             return { subject, body };
         }
 
-        function displayEmail(emailText) {
+        async function displayEmail(emailText) {
             const { subject, body } = parseEmail(emailText);
+            emailSubject = subject;
+            emailBody = body;
+            
             const emailEmptyState = document.getElementById('emailEmptyState');
             
             if (emailEmptyState) {
@@ -573,6 +797,15 @@
             
             emailOutput.innerHTML = html;
             emailOutput.style.display = 'block';
+            
+            // Check Gmail status and show send button if applicable
+            await checkGmailStatus();
+            const gmailStatus = await fetch('/api/gmail/status').then(r => r.json());
+            const recipientEmail = document.getElementById('recipientEmail').value || currentRecipientEmail;
+            
+            if (gmailStatus.connected && recipientEmail) {
+                sendEmailBtn.style.display = 'inline-block';
+            }
         }
 
         async function generateEmail(params) {
@@ -593,7 +826,7 @@
 
                 if (response.ok) {
                     generatedEmail = data.email;
-                    displayEmail(generatedEmail);
+                    await displayEmail(generatedEmail);
                     outputCard.style.display = 'block';
                     actionButtons.classList.add('show');
                     
@@ -633,6 +866,7 @@
                 purpose: purpose,
                 tone: tone,
                 recipient_name: recipientName,
+                recipient_company: document.getElementById('recipientCompany').value,
                 additional_context: additionalContext
             };
 
@@ -681,6 +915,56 @@
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+        });
+
+        // Send Email via Gmail
+        sendEmailBtn.addEventListener('click', async () => {
+            const recipientEmail = document.getElementById('recipientEmail').value || currentRecipientEmail;
+            
+            if (!recipientEmail) {
+                document.getElementById('errorMessage').textContent = 'No recipient email address found. Please enter or select a contact with an email.';
+                errorToast.show();
+                return;
+            }
+
+            if (!emailSubject || !emailBody) {
+                document.getElementById('errorMessage').textContent = 'Please generate an email first.';
+                errorToast.show();
+                return;
+            }
+
+            const spinner = sendEmailBtn.querySelector('.spinner-border');
+            spinner.classList.remove('d-none');
+            sendEmailBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/gmail/send', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        to_email: recipientEmail,
+                        subject: emailSubject,
+                        body: emailBody
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('successToast').querySelector('.toast-body').textContent = 'Email sent successfully!';
+                    successToast.show();
+                } else {
+                    throw new Error(data.error || 'Failed to send email');
+                }
+            } catch (error) {
+                document.getElementById('errorMessage').textContent = error.message;
+                errorToast.show();
+            } finally {
+                spinner.classList.add('d-none');
+                sendEmailBtn.disabled = false;
+            }
         });
     </script>
 </body>
