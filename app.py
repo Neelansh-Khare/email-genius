@@ -12,6 +12,7 @@ from googleapiclient.errors import HttpError
 import base64
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from apify_client import ApifyClient
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
@@ -30,6 +31,9 @@ SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
 CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
 REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 'http://localhost:5000/oauth2callback')
+
+# LinkedIn/Apify Configuration
+APIFY_API_TOKEN = os.environ.get('APIFY_API_TOKEN')
 
 # User profiles storage (in production, use a database)
 USER_PROFILES_FILE = 'user_profiles.json'
@@ -54,21 +58,109 @@ def get_user_id():
     return session['user_id']
 
 
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-
-@app.route('/find-contacts', methods=['POST'])
-def find_contacts():
+def find_linkedin_contacts(company_type, role_types, location, max_results=5):
+    """
+    Find real LinkedIn contacts using Apify LinkedIn Profile Scraper
+    
+    Args:
+        company_type: Type of company (e.g., 'big tech', 'startups')
+        role_types: List of job titles to search for
+        location: Location to search in
+        max_results: Maximum number of contacts to return
+    
+    Returns:
+        List of contact dictionaries with name, title, company, location, linkedin_url
+    """
+    if not APIFY_API_TOKEN:
+        return None
+    
     try:
-        data = request.get_json()
-        company_type = data.get('company_type', 'big tech')
-        role_types = data.get('role_types', ['Staff Engineer', 'HR Leader'])
-        location = data.get('location', 'San Francisco')
+        client = ApifyClient(APIFY_API_TOKEN)
         
-        # Use Gemini to generate realistic contact suggestions based on the criteria
-        prompt = f"""Generate a list of 5 potential hiring manager contacts at {company_type} companies in {location}.
+        # Build search query - combine role types and location
+        # For example: "Staff Engineer OR HR Leader San Francisco"
+        role_query = " OR ".join(role_types)
+        search_query = f"{role_query} {location}"
+        
+        # Map company types to LinkedIn company searches
+        # This is a simplified approach - you might want to expand this
+        company_keywords = []
+        if 'big tech' in company_type.lower() or 'faang' in company_type.lower():
+            company_keywords = ['Google', 'Apple', 'Microsoft', 'Amazon', 'Meta', 'Netflix']
+        elif 'startup' in company_type.lower():
+            company_keywords = ['startup', 'tech startup']
+        else:
+            company_keywords = [company_type]
+        
+        contacts = []
+        
+        # Search for profiles using Apify's LinkedIn Profile Scraper
+        # Note: This uses Apify's actor which requires proper setup
+        # Alternative: Use LinkedIn People Search actor
+        
+        # Try using LinkedIn People Search actor
+        # Note: You may need to use a different actor ID based on what's available in Apify
+        # Common actors: "keheliya/linkedin-people-search", "apify/linkedin-scraper"
+        # Check Apify store for available LinkedIn actors: https://apify.com/store
+        
+        # Using a generic LinkedIn profile scraper approach
+        # You may need to adjust the actor ID based on your Apify account
+        actor_id = "keheliya/linkedin-people-search"  # Update this if needed
+        
+        run_input = {
+            "searchKeywords": search_query,
+            "maxResults": max_results,
+            "location": location,
+        }
+        
+        # Run the actor
+        run = client.actor(actor_id).call(run_input=run_input)
+        
+        # Fetch results
+        results = []
+        for item in client.dataset(run["defaultDatasetId"]).iterate_items():
+            results.append(item)
+        
+        # Transform results to our contact format
+        for profile in results[:max_results]:
+            # Extract relevant information
+            full_name = profile.get('fullName', '')
+            headline = profile.get('headline', '')
+            company = profile.get('company', '') or headline.split(' at ')[-1] if ' at ' in headline else ''
+            profile_url = profile.get('profileUrl', '')
+            location_str = profile.get('location', location)
+            
+            # Try to extract title from headline
+            title = headline
+            if ' at ' in headline:
+                title = headline.split(' at ')[0]
+            
+            # Check if title matches any of our role types
+            title_matches = any(role.lower() in title.lower() for role in role_types)
+            
+            if full_name and (title_matches or not role_types):
+                contact = {
+                    'name': full_name,
+                    'title': title,
+                    'company': company or 'Unknown',
+                    'location': location_str,
+                    'linkedin_url': profile_url,
+                    'source': 'linkedin'
+                }
+                contacts.append(contact)
+        
+        return contacts if contacts else None
+        
+    except Exception as e:
+        print(f"LinkedIn search error: {str(e)}")
+        return None
+
+
+def find_contacts_gemini(company_type, role_types, location):
+    """
+    Fallback: Generate fictional contacts using Gemini
+    """
+    prompt = f"""Generate a list of 5 potential hiring manager contacts at {company_type} companies in {location}.
 
 For each contact, provide:
 - Name (realistic but fictional to demonstrate the concept)
@@ -86,19 +178,60 @@ Example format:
 
 IMPORTANT: Return ONLY the JSON array, no other text."""
 
-        response = gemini_client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json"
-            )
+    response = gemini_client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json"
         )
+    )
+    
+    contacts_text = response.text if response.text else "[]"
+    contacts = json.loads(contacts_text)
+    
+    # Add source marker
+    for contact in contacts:
+        contact['source'] = 'fictional'
+        if 'linkedin_url' not in contact:
+            contact['linkedin_url'] = ''
+    
+    return contacts
+
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+
+@app.route('/find-contacts', methods=['POST'])
+def find_contacts():
+    try:
+        data = request.get_json()
+        company_type = data.get('company_type', 'big tech')
+        role_types = data.get('role_types', ['Staff Engineer', 'HR Leader'])
+        location = data.get('location', 'San Francisco')
+        use_linkedin = data.get('use_linkedin', False)  # New parameter to toggle LinkedIn
         
-        contacts_text = response.text if response.text else "[]"
-        import json
-        contacts = json.loads(contacts_text)
+        contacts = []
+        source = 'fictional'
         
-        return jsonify({'contacts': contacts})
+        # Try LinkedIn first if requested and configured
+        if use_linkedin and APIFY_API_TOKEN:
+            linkedin_contacts = find_linkedin_contacts(company_type, role_types, location)
+            if linkedin_contacts:
+                contacts = linkedin_contacts
+                source = 'linkedin'
+        
+        # Fallback to Gemini if LinkedIn failed or not requested
+        if not contacts:
+            contacts = find_contacts_gemini(company_type, role_types, location)
+            source = 'fictional'
+        
+        return jsonify({
+            'contacts': contacts,
+            'source': source,
+            'linkedin_available': bool(APIFY_API_TOKEN)
+        })
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
